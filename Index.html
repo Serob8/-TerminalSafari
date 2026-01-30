@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TerminalSafari | Apple.inc Integrated</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <style>
+        body { background: #000; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #status-bar { background: #1a1a1a; color: #0aef0a; font-family: 'SF Mono', monospace; padding: 8px 15px; display: flex; justify-content: space-between; font-size: 13px; border-bottom: 1px solid #333; }
+        #terminal { flex: 1; background: #000; }
+    </style>
+</head>
+<body>
+    <div id="status-bar">
+        <span> TerminalSafari System v1.0</span>
+        <span id="load-avg">Load: 0.01</span>
+    </div>
+    <div id="terminal"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script type="module">
+        import { Wasmer, init, Directory } from "https://unpkg.com/@wasmer/sdk@latest/dist/index.mjs";
+
+        async function startSystem() {
+            // 1. Initialize Engine
+            await init();
+
+            // 2. Setup Persistent Storage (The 'Server' Drive)
+            const homeDir = new Directory();
+
+            // 3. Setup Terminal UI
+            const term = new Terminal({
+                cursorBlink: true,
+                convertEol: true,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                fontSize: 14,
+                theme: { background: '#000' }
+            });
+            term.open(document.getElementById('terminal'));
+            term.writeln("Booting TerminalSafari...");
+
+            // 4. Load Bash (The Command Center)
+            const pkg = await Wasmer.fromRegistry("sharrattj/bash");
+            
+            // This is the 'Instance Code' configured for System-Level power
+            const instance = await pkg.entrypoint.run({
+                args: ["--login"],
+                mount: { "/home": homeDir },
+                capabilities: {
+                    threading: true,     // Unlocks multi-core CPU usage
+                    process_spawn: true, // Crucial for running external scripts
+                    network: true        // Allows communication with Apple servers
+                }
+            });
+
+            // 5. Connect Input/Output
+            instance.stdout.pipeTo(new WritableStream({
+                write(chunk) { term.write(new TextDecoder().decode(chunk)); }
+            }));
+
+            instance.stderr.pipeTo(new WritableStream({
+                write(chunk) { term.write("\x1b[31m" + new TextDecoder().decode(chunk) + "\x1b[0m"); }
+            }));
+
+            const stdin = instance.stdin.getWriter();
+            const encoder = new TextEncoder();
+            term.onData(data => stdin.write(encoder.encode(data)));
+
+            term.writeln("System Ready. Connected to Cloud Node.");
+        }
+
+        startSystem();
+    </script>
+</body>
+</html>
