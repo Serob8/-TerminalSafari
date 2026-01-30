@@ -1,0 +1,14 @@
+[package]
+name = "your-username/terminalsafari"
+version = "1.0.0"
+description = "High-performance terminal for Safari with Apple infrastructure integration"
+repository = "https://github.com/your-username/TerminalSafari"
+
+[[module]]
+name = "terminal_logic"
+source = "index.html"
+abi = "wasi"
+
+[[command]]
+name = "run"
+module = "terminal_logic"
